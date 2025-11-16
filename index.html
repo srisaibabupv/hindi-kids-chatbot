@@ -1,60 +1,138 @@
 <!DOCTYPE html>
-<html>
+<html lang="hi">
 <head>
-    <title>Hindi Kids Chatbot</title>
-    <style>
-        body { font-family: Arial; max-width: 600px; margin: auto; padding: 20px; }
-        #output { margin-top: 20px; padding: 10px; background:#f2f2f2; border-radius:8px; }
-        .btn { padding:10px 20px; background:#4CAF50; color:white; border:none; border-radius:6px; }
-    </style>
+  <meta charset="UTF-8">
+  <title>Hindi Story Chatbot</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to bottom, #fffae6, #ffe6f0);
+      text-align: center;
+      padding: 20px;
+    }
+    #story {
+      font-size: 24px;
+      margin: 30px auto;
+      width: 90%;
+      min-height: 150px;
+      background: #fff3e6;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 2px 2px 12px rgba(0,0,0,0.2);
+    }
+    button {
+      font-size: 20px;
+      padding: 15px 30px;
+      margin: 10px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      background-color: #ff9966;
+      color: white;
+    }
+    button:hover {
+      background-color: #ff6600;
+    }
+  </style>
 </head>
 <body>
 
-<h2>🎤 Hindi Voice Chatbot for Kids</h2>
-<p>Press the button and ask something in Hindi!</p>
+  <h1>🎉 Hindi Story Chatbot 🎉</h1>
+  <div id="story">कहानी शुरू करने के लिए नीचे क्लिक करें।</div>
+  <button id="startBtn">स्टार्ट स्टोरी</button>
+  <button id="speakBtn">🗣️ बोलो उत्तर</button>
 
-<button id="talk" class="btn">🎤 Speak</button>
+  <script>
+    const storyDiv = document.getElementById('story');
+    const startBtn = document.getElementById('startBtn');
+    const speakBtn = document.getElementById('speakBtn');
 
-<div id="output"></div>
+    // ===== Story Array =====
+    const story = [
+      {
+        text: "एक बार की बात है, एक छोटा लड़का जंगल में खेल रहा था।",
+        question: "उसका नाम क्या था?",
+        answer: "राजू"
+      },
+      {
+        text: "राजू ने जंगल में खेलते-खेलते एक सुंदर तितली देखी।",
+        question: "राजू ने क्या देखा?",
+        answer: "तितली"
+      },
+      {
+        text: "तितली के पीछे-पीछे वह एक झरने तक पहुँचा।",
+        question: "राजू कहाँ पहुँचा?",
+        answer: "झरना"
+      },
+      {
+        text: "राजू ने झरने के पास खेला और खुश हुआ।",
+        question: null,
+        answer: null
+      }
+    ];
 
-<script>
-    // ========= 1. Voice Input (Speech-to-Text) ===========
-    const recognizer = new webkitSpeechRecognition();
-    recognizer.lang = "hi-IN";
+    let index = 0;
+
+    // ===== Text-to-Speech =====
+    function speak(text) {
+      const msg = new SpeechSynthesisUtterance(text);
+      msg.lang = 'hi-IN';
+      window.speechSynthesis.speak(msg);
+    }
+
+    // ===== Start Story =====
+    startBtn.onclick = () => {
+      index = 0;
+      storyDiv.innerHTML = story[index].text;
+      speak(story[index].text);
+    }
+
+    // ===== Speech Recognition =====
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("आपके ब्राउज़र में वॉइस रिकग्निशन सपोर्ट नहीं है। कृपया क्रोम ब्राउज़र का उपयोग करें।");
+    }
+    const recognizer = new SpeechRecognition();
+    recognizer.lang = 'hi-IN';
     recognizer.continuous = false;
 
-    const talkBtn = document.getElementById("talk");
-    const outputDiv = document.getElementById("output");
+    speakBtn.onclick = () => {
+      if (!story[index] || !story[index].question) {
+        storyDiv.innerHTML = "कहानी समाप्त हो गई है।";
+        speak("कहानी समाप्त हो गई है।");
+        return;
+      }
 
-    talkBtn.onclick = () => {
-        recognizer.start();
-        outputDiv.innerHTML = "Listening...";
-    };
+      speak("कृपया उत्तर बोलें।");
+      recognizer.start();
+    }
 
-    recognizer.onresult = async (event) => {
-        let text = event.results[0][0].transcript;
-        outputDiv.innerHTML = "You said: " + text;
+    recognizer.onresult = (event) => {
+      const userAnswer = event.results[0][0].transcript.trim().toLowerCase();
+      const correctAnswer = story[index].answer.toLowerCase();
 
-        // ======== 2. Send to AI (replace YOUR_KEY if using OpenAI) ===========
-        let reply = await fetch("https://api-inference.huggingface.co/models/google/gemma-2-9b-it", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                inputs: `You are a Hindi teacher for kids. Respond in simple Hindi only. Child said: ${text}`
-            })
-        })
-        .then(r => r.json());
+      if (userAnswer === correctAnswer) {
+        storyDiv.innerHTML = `शाबाश! सही उत्तर है: ${story[index].answer}`;
+        speak(`शाबाश! सही उत्तर है: ${story[index].answer}`);
+      } else {
+        storyDiv.innerHTML = `कोशिश करो। सही उत्तर है: ${story[index].answer}`;
+        speak(`कोशिश करो। सही उत्तर है: ${story[index].answer}`);
+      }
 
-        let botText = reply[0]?.generated_text || "मुझे समझ नहीं आया।";
-
-        outputDiv.innerHTML += "<br><br><b>Bot:</b> " + botText;
-
-        // ========= 3. Speak Out the Response (TTS) ===========
-        let utter = new SpeechSynthesisUtterance(botText);
-        utter.lang = "hi-IN";
-        speechSynthesis.speak(utter);
-    };
-</script>
-
+      // Move to next part of story
+      index++;
+      if (story[index]) {
+        setTimeout(() => {
+          storyDiv.innerHTML = story[index].text;
+          speak(story[index].text);
+        }, 2500);
+      } else {
+        setTimeout(() => {
+          storyDiv.innerHTML = "कहानी समाप्त हो गई है।";
+          speak("कहानी समाप्त हो गई है।");
+        }, 2500);
+      }
+    }
+  </script>
 </body>
 </html>
