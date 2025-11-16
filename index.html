@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hindi Kids Chatbot</title>
+    <style>
+        body { font-family: Arial; max-width: 600px; margin: auto; padding: 20px; }
+        #output { margin-top: 20px; padding: 10px; background:#f2f2f2; border-radius:8px; }
+        .btn { padding:10px 20px; background:#4CAF50; color:white; border:none; border-radius:6px; }
+    </style>
+</head>
+<body>
+
+<h2>🎤 Hindi Voice Chatbot for Kids</h2>
+<p>Press the button and ask something in Hindi!</p>
+
+<button id="talk" class="btn">🎤 Speak</button>
+
+<div id="output"></div>
+
+<script>
+    // ========= 1. Voice Input (Speech-to-Text) ===========
+    const recognizer = new webkitSpeechRecognition();
+    recognizer.lang = "hi-IN";
+    recognizer.continuous = false;
+
+    const talkBtn = document.getElementById("talk");
+    const outputDiv = document.getElementById("output");
+
+    talkBtn.onclick = () => {
+        recognizer.start();
+        outputDiv.innerHTML = "Listening...";
+    };
+
+    recognizer.onresult = async (event) => {
+        let text = event.results[0][0].transcript;
+        outputDiv.innerHTML = "You said: " + text;
+
+        // ======== 2. Send to AI (replace YOUR_KEY if using OpenAI) ===========
+        let reply = await fetch("https://api-inference.huggingface.co/models/google/gemma-2-9b-it", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                inputs: `You are a Hindi teacher for kids. Respond in simple Hindi only. Child said: ${text}`
+            })
+        })
+        .then(r => r.json());
+
+        let botText = reply[0]?.generated_text || "मुझे समझ नहीं आया।";
+
+        outputDiv.innerHTML += "<br><br><b>Bot:</b> " + botText;
+
+        // ========= 3. Speak Out the Response (TTS) ===========
+        let utter = new SpeechSynthesisUtterance(botText);
+        utter.lang = "hi-IN";
+        speechSynthesis.speak(utter);
+    };
+</script>
+
+</body>
+</html>
