@@ -2,21 +2,21 @@
 <html lang="hi">
 <head>
   <meta charset="UTF-8">
-  <title>Hindi Story Chatbot</title>
+  <title>Interactive Hindi Story Chatbot</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: linear-gradient(to bottom, #fffae6, #ffe6f0);
       text-align: center;
       padding: 20px;
+      background: linear-gradient(to bottom, #fffae6, #ffe6f0);
     }
     #story {
       font-size: 24px;
-      margin: 30px auto;
+      margin: 20px auto;
+      padding: 20px;
       width: 90%;
       min-height: 150px;
       background: #fff3e6;
-      padding: 20px;
       border-radius: 15px;
       box-shadow: 2px 2px 12px rgba(0,0,0,0.2);
     }
@@ -33,106 +33,132 @@
     button:hover {
       background-color: #ff6600;
     }
+    .optionBtn {
+      display: block;
+      margin: 10px auto;
+      width: 70%;
+    }
   </style>
 </head>
 <body>
 
-  <h1>🎉 Hindi Story Chatbot 🎉</h1>
-  <div id="story">कहानी शुरू करने के लिए नीचे क्लिक करें।</div>
-  <button id="startBtn">स्टार्ट स्टोरी</button>
-  <button id="speakBtn">🗣️ बोलो उत्तर</button>
+<h1>🎉 Interactive Hindi Story 🎉</h1>
+<div id="story">कहानी शुरू करने के लिए नीचे क्लिक करें।</div>
+<button id="startBtn">स्टार्ट स्टोरी</button>
+<button id="speakBtn">🗣️ बोलो उत्तर</button>
+<div id="options"></div>
 
-  <script>
-    const storyDiv = document.getElementById('story');
-    const startBtn = document.getElementById('startBtn');
-    const speakBtn = document.getElementById('speakBtn');
+<script>
+  const storyDiv = document.getElementById('story');
+  const startBtn = document.getElementById('startBtn');
+  const speakBtn = document.getElementById('speakBtn');
+  const optionsDiv = document.getElementById('options');
 
-    // ===== Story Array =====
-    const story = [
-      {
-        text: "एक बार की बात है, एक छोटा लड़का जंगल में खेल रहा था।",
-        question: "उसका नाम क्या था?",
-        answer: "राजू"
-      },
-      {
-        text: "राजू ने जंगल में खेलते-खेलते एक सुंदर तितली देखी।",
-        question: "राजू ने क्या देखा?",
-        answer: "तितली"
-      },
-      {
-        text: "तितली के पीछे-पीछे वह एक झरने तक पहुँचा।",
-        question: "राजू कहाँ पहुँचा?",
-        answer: "झरना"
-      },
-      {
-        text: "राजू ने झरने के पास खेला और खुश हुआ।",
-        question: null,
-        answer: null
-      }
-    ];
+  // ===== Story JSON with branching paths =====
+  const story = {
+    1: {
+      text: "राजू जंगल में खेल रहा था। तुम क्या करना चाहोगे?",
+      options: [
+        {text: "पेड़ पर चढ़ना", next: 2},
+        {text: "नदी के पास जाना", next: 3}
+      ]
+    },
+    2: {
+      text: "राजू पेड़ पर चढ़ गया और एक पक्षी देखा। क्या वह पक्षी को पकड़ने की कोशिश करेगा?",
+      options: [
+        {text: "हाँ", next: 4},
+        {text: "नहीं", next: 5}
+      ]
+    },
+    3: {
+      text: "राजू नदी के पास गया और मछली देखी। क्या वह मछली को पकड़ने की कोशिश करेगा?",
+      options: [
+        {text: "हाँ", next: 6},
+        {text: "नहीं", next: 7}
+      ]
+    },
+    4: {text: "राजू ने पक्षी को पकड़ने की कोशिश की और उसने उड़ान भरी। कहानी समाप्त!", options: []},
+    5: {text: "राजू ने पक्षी को देखने का आनंद लिया। कहानी समाप्त!", options: []},
+    6: {text: "राजू ने मछली पकड़ने की कोशिश की और वह बच गई। कहानी समाप्त!", options: []},
+    7: {text: "राजू ने मछली को देखने का आनंद लिया। कहानी समाप्त!", options: []}
+  };
 
-    let index = 0;
+  let currentId = 1;
 
-    // ===== Text-to-Speech =====
-    function speak(text) {
-      const msg = new SpeechSynthesisUtterance(text);
-      msg.lang = 'hi-IN';
-      window.speechSynthesis.speak(msg);
+  // ===== Text-to-Speech =====
+  function speak(text) {
+    const msg = new SpeechSynthesisUtterance(text);
+    msg.lang = 'hi-IN';
+    window.speechSynthesis.speak(msg);
+  }
+
+  // ===== Start Story =====
+  startBtn.onclick = () => {
+    currentId = 1;
+    showStory(currentId);
+  }
+
+  function showStory(id) {
+    const node = story[id];
+    storyDiv.innerHTML = node.text;
+    speak(node.text);
+    showOptions(node.options);
+  }
+
+  // ===== Show Options =====
+  function showOptions(options) {
+    optionsDiv.innerHTML = "";
+    if (!options || options.length === 0) {
+      speak("कहानी समाप्त हो गई है।");
+      return;
     }
+    options.forEach(opt => {
+      const btn = document.createElement("button");
+      btn.className = "optionBtn";
+      btn.innerText = opt.text;
+      btn.onclick = () => {
+        currentId = opt.next;
+        showStory(currentId);
+      };
+      optionsDiv.appendChild(btn);
+    });
+  }
 
-    // ===== Start Story =====
-    startBtn.onclick = () => {
-      index = 0;
-      storyDiv.innerHTML = story[index].text;
-      speak(story[index].text);
+  // ===== Speech Recognition =====
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert("आपके ब्राउज़र में वॉइस रिकग्निशन सपोर्ट नहीं है। कृपया क्रोम ब्राउज़र का उपयोग करें।");
+  }
+  const recognizer = new SpeechRecognition();
+  recognizer.lang = 'hi-IN';
+  recognizer.continuous = false;
+
+  speakBtn.onclick = () => {
+    const node = story[currentId];
+    if (!node.options || node.options.length === 0) {
+      storyDiv.innerHTML = "कहानी समाप्त हो गई है।";
+      speak("कहानी समाप्त हो गई है।");
+      return;
     }
+    speak("कृपया उत्तर बोलें।");
+    recognizer.start();
+  }
 
-    // ===== Speech Recognition =====
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert("आपके ब्राउज़र में वॉइस रिकग्निशन सपोर्ट नहीं है। कृपया क्रोम ब्राउज़र का उपयोग करें।");
+  recognizer.onresult = (event) => {
+    const userAnswer = event.results[0][0].transcript.trim().toLowerCase();
+    const node = story[currentId];
+    const matchedOption = node.options.find(opt => userAnswer.includes(opt.text.toLowerCase()));
+
+    if (matchedOption) {
+      storyDiv.innerHTML = `शाबाश! तुमने चुना: ${matchedOption.text}`;
+      speak(`शाबाश! तुमने चुना: ${matchedOption.text}`);
+      currentId = matchedOption.next;
+      setTimeout(() => showStory(currentId), 1500);
+    } else {
+      storyDiv.innerHTML = `कोशिश करो! सही विकल्प बोलो।`;
+      speak("कोशिश करो! सही विकल्प बोलो।");
     }
-    const recognizer = new SpeechRecognition();
-    recognizer.lang = 'hi-IN';
-    recognizer.continuous = false;
-
-    speakBtn.onclick = () => {
-      if (!story[index] || !story[index].question) {
-        storyDiv.innerHTML = "कहानी समाप्त हो गई है।";
-        speak("कहानी समाप्त हो गई है।");
-        return;
-      }
-
-      speak("कृपया उत्तर बोलें।");
-      recognizer.start();
-    }
-
-    recognizer.onresult = (event) => {
-      const userAnswer = event.results[0][0].transcript.trim().toLowerCase();
-      const correctAnswer = story[index].answer.toLowerCase();
-
-      if (userAnswer === correctAnswer) {
-        storyDiv.innerHTML = `शाबाश! सही उत्तर है: ${story[index].answer}`;
-        speak(`शाबाश! सही उत्तर है: ${story[index].answer}`);
-      } else {
-        storyDiv.innerHTML = `कोशिश करो। सही उत्तर है: ${story[index].answer}`;
-        speak(`कोशिश करो। सही उत्तर है: ${story[index].answer}`);
-      }
-
-      // Move to next part of story
-      index++;
-      if (story[index]) {
-        setTimeout(() => {
-          storyDiv.innerHTML = story[index].text;
-          speak(story[index].text);
-        }, 2500);
-      } else {
-        setTimeout(() => {
-          storyDiv.innerHTML = "कहानी समाप्त हो गई है।";
-          speak("कहानी समाप्त हो गई है।");
-        }, 2500);
-      }
-    }
-  </script>
+  }
+</script>
 </body>
 </html>
