@@ -2,7 +2,7 @@
 <html lang="hi">
 <head>
   <meta charset="UTF-8">
-  <title>Interactive Hindi Story Chatbot</title>
+  <title>Interactive Voice Hindi Story</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -33,54 +33,44 @@
     button:hover {
       background-color: #ff6600;
     }
-    .optionBtn {
-      display: block;
-      margin: 10px auto;
-      width: 70%;
-    }
   </style>
 </head>
 <body>
 
-<h1>🎉 Interactive Hindi Story 🎉</h1>
+<h1>🎤 Interactive Hindi Story</h1>
 <div id="story">कहानी शुरू करने के लिए नीचे क्लिक करें।</div>
 <button id="startBtn">स्टार्ट स्टोरी</button>
 <button id="speakBtn">🗣️ बोलो उत्तर</button>
-<div id="options"></div>
 
 <script>
   const storyDiv = document.getElementById('story');
   const startBtn = document.getElementById('startBtn');
   const speakBtn = document.getElementById('speakBtn');
-  const optionsDiv = document.getElementById('options');
 
-  // ===== Story JSON with branching paths =====
+  // ===== Voice-only Story Nodes =====
   const story = {
     1: {
-      text: "राजू जंगल में खेल रहा था। तुम क्या करना चाहोगे?",
-      options: [
-        {text: "पेड़ पर चढ़ना", next: 2},
-        {text: "नदी के पास जाना", next: 3}
-      ]
+      text: "राजू जंगल में खेल रहा था। क्या वह पेड़ पर चढ़ेगा या नदी के पास जाएगा?",
+      question: "तुम क्या सोचते?",
+      expectedAnswers: ["पेड़", "नदी"],
+      next: {"पेड़": 2, "नदी": 3}
     },
     2: {
       text: "राजू पेड़ पर चढ़ गया और एक पक्षी देखा। क्या वह पक्षी को पकड़ने की कोशिश करेगा?",
-      options: [
-        {text: "हाँ", next: 4},
-        {text: "नहीं", next: 5}
-      ]
+      question: "क्या वह पक्षी को पकड़ने की कोशिश करेगा?",
+      expectedAnswers: ["हाँ", "नहीं"],
+      next: {"हाँ": 4, "नहीं": 5}
     },
     3: {
       text: "राजू नदी के पास गया और मछली देखी। क्या वह मछली को पकड़ने की कोशिश करेगा?",
-      options: [
-        {text: "हाँ", next: 6},
-        {text: "नहीं", next: 7}
-      ]
+      question: "क्या वह मछली को पकड़ने की कोशिश करेगा?",
+      expectedAnswers: ["हाँ", "नहीं"],
+      next: {"हाँ": 6, "नहीं": 7}
     },
-    4: {text: "राजू ने पक्षी को पकड़ने की कोशिश की और उसने उड़ान भरी। कहानी समाप्त!", options: []},
-    5: {text: "राजू ने पक्षी को देखने का आनंद लिया। कहानी समाप्त!", options: []},
-    6: {text: "राजू ने मछली पकड़ने की कोशिश की और वह बच गई। कहानी समाप्त!", options: []},
-    7: {text: "राजू ने मछली को देखने का आनंद लिया। कहानी समाप्त!", options: []}
+    4: {text: "राजू ने पक्षी को पकड़ने की कोशिश की और वह उड़ गया। कहानी समाप्त!", expectedAnswers: [], next: {}},
+    5: {text: "राजू ने पक्षी को देखने का आनंद लिया। कहानी समाप्त!", expectedAnswers: [], next: {}},
+    6: {text: "राजू ने मछली पकड़ने की कोशिश की और वह बच गई। कहानी समाप्त!", expectedAnswers: [], next: {}},
+    7: {text: "राजू ने मछली को देखने का आनंद लिया। कहानी समाप्त!", expectedAnswers: [], next: {}}
   };
 
   let currentId = 1;
@@ -102,26 +92,6 @@
     const node = story[id];
     storyDiv.innerHTML = node.text;
     speak(node.text);
-    showOptions(node.options);
-  }
-
-  // ===== Show Options =====
-  function showOptions(options) {
-    optionsDiv.innerHTML = "";
-    if (!options || options.length === 0) {
-      speak("कहानी समाप्त हो गई है।");
-      return;
-    }
-    options.forEach(opt => {
-      const btn = document.createElement("button");
-      btn.className = "optionBtn";
-      btn.innerText = opt.text;
-      btn.onclick = () => {
-        currentId = opt.next;
-        showStory(currentId);
-      };
-      optionsDiv.appendChild(btn);
-    });
   }
 
   // ===== Speech Recognition =====
@@ -135,30 +105,39 @@
 
   speakBtn.onclick = () => {
     const node = story[currentId];
-    if (!node.options || node.options.length === 0) {
+    if (!node.expectedAnswers || node.expectedAnswers.length === 0) {
       storyDiv.innerHTML = "कहानी समाप्त हो गई है।";
       speak("कहानी समाप्त हो गई है।");
       return;
     }
-    speak("कृपया उत्तर बोलें।");
+    speak(node.question);
     recognizer.start();
   }
 
   recognizer.onresult = (event) => {
     const userAnswer = event.results[0][0].transcript.trim().toLowerCase();
     const node = story[currentId];
-    const matchedOption = node.options.find(opt => userAnswer.includes(opt.text.toLowerCase()));
 
-    if (matchedOption) {
-      storyDiv.innerHTML = `शाबाश! तुमने चुना: ${matchedOption.text}`;
-      speak(`शाबाश! तुमने चुना: ${matchedOption.text}`);
-      currentId = matchedOption.next;
+    // Match spoken answer to expectedAnswers
+    let matched = null;
+    for (let ans of node.expectedAnswers) {
+      if (userAnswer.includes(ans.toLowerCase())) {
+        matched = ans;
+        break;
+      }
+    }
+
+    if (matched) {
+      storyDiv.innerHTML = `शाबाश! तुमने कहा: ${matched}`;
+      speak(`शाबाश! तुमने कहा: ${matched}`);
+      currentId = node.next[matched];
       setTimeout(() => showStory(currentId), 1500);
     } else {
-      storyDiv.innerHTML = `कोशिश करो! सही विकल्प बोलो।`;
-      speak("कोशिश करो! सही विकल्प बोलो।");
+      storyDiv.innerHTML = `कोशिश करो! सही उत्तर दो।`;
+      speak("कोशिश करो! सही उत्तर दो।");
     }
   }
 </script>
+
 </body>
 </html>
